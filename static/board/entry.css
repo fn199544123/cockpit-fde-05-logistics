@@ -1,0 +1,71 @@
+/* 数据录入 / 采集 —— 快速录入页，沿用 dashboard/ledger 的暗色调色板 */
+
+.top-right { display: flex; align-items: center; gap: 12px; }
+
+.entry-shell { grid-template-columns: 200px 1fr; }
+
+.code-chip {
+  display: inline-block; margin-left: 4px; padding: 1px 10px; border-radius: 20px;
+  background: var(--chip); color: var(--accent); border: 1px solid rgba(55,230,200,.35);
+  font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px;
+}
+
+.mode-switch { display: flex; gap: 8px; }
+.mode-btn.active { background: var(--accent); color: #062018; border-color: var(--accent); font-weight: 600; }
+
+/* 左录入 + 右清单 */
+.entry-cols { display: grid; grid-template-columns: 1fr 360px; gap: 18px; align-items: start; }
+.entry-left { min-width: 0; }
+.form-card.hidden { display: none; }
+
+.bulk-area {
+  resize: vertical; line-height: 1.7; font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+.field .err { font-size: 12px; color: var(--danger); min-height: 0; }
+.field .err:empty { display: none; }
+.form-actions .hint { font-size: 12px; color: var(--muted); }
+
+/* 本次已录入清单 */
+.entry-right {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px; position: sticky; top: 18px; max-height: calc(100vh - 120px);
+  display: flex; flex-direction: column;
+}
+.recent-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  color: var(--muted); font-size: 13px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line); margin-bottom: 8px;
+}
+.recent-head b { color: var(--accent); font-size: 16px; }
+.recent-head .recent-latest { font-size: 12px; }
+
+.entry-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.entry-list li {
+  font-size: 13px; padding: 8px 6px; border-bottom: 1px dashed var(--line);
+  color: var(--txt); line-height: 1.5; word-break: break-all;
+}
+.entry-list li .dot { color: var(--muted); margin-right: 6px; }
+.entry-list li.empty { color: var(--muted); text-align: center; padding: 30px 6px; border: none; }
+.entry-list li.hist { color: var(--muted); }
+/* 本轮新录入：高亮一下再淡出到常态 */
+.entry-list li.fresh { color: var(--ok); animation: flash .9s ease; }
+.entry-list li.fresh .dot { color: var(--ok); }
+@keyframes flash {
+  from { background: rgba(55,230,200,.18); }
+  to   { background: transparent; }
+}
+
+/* 批量结果提示 */
+.bulk-result { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.bulk-result .msg { padding: 9px 14px; }
+.bulk-errline { font-size: 12px; color: var(--danger); }
+
+@media (max-width: 1100px) {
+  .entry-cols { grid-template-columns: 1fr; }
+  .entry-right { position: static; max-height: none; }
+}
+@media (max-width: 900px) {
+  .entry-shell { grid-template-columns: 1fr; }
+  .side-nav { flex-direction: row; flex-wrap: wrap; }
+}

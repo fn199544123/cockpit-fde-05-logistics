@@ -1,0 +1,54 @@
+{% extends 'board/ledger_base.html' %}
+{% block title %}{{ cfg.title }}{% endblock %}
+{% block content %}
+<div class="page-head row">
+  <div>
+    <h2>{{ cfg.icon }} {{ cfg.title }}</h2>
+    <p class="sub">共 {{ total }} 条{% if q %}（关键字「{{ q }}」）{% endif %}</p>
+  </div>
+  <a class="btn primary" href="{% url 'ledger_new' slug %}">＋ 新增{{ cfg.title }}</a>
+</div>
+
+<form class="toolbar" method="get">
+  <input class="inp search" type="text" name="q" value="{{ q }}"
+         placeholder="搜索{{ cfg.title }}关键字…" autocomplete="off">
+  <button class="btn" type="submit">搜索</button>
+  {% if q %}<a class="btn ghost" href="{% url 'ledger_list' slug %}">清除</a>{% endif %}
+</form>
+
+<div class="table-wrap">
+  <table class="grid-table">
+    <thead>
+      <tr>
+        {% for c in columns %}<th>{{ c.header }}</th>{% endfor %}
+        <th class="ops-col">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        {% for cell in r.cells %}
+          <td>
+            {% if cell.slug %}
+              <span class="tag st-{{ cell.slug }}">{{ cell.text }}</span>
+            {% else %}{{ cell }}{% endif %}
+          </td>
+        {% endfor %}
+        <td class="ops">
+          <a class="btn sm" href="{% url 'ledger_edit' slug r.pk %}">编辑</a>
+          <form method="post" action="{% url 'ledger_delete' slug r.pk %}"
+                class="inline" data-confirm="确认删除该{{ cfg.title }}？此操作不可撤销。">
+            {% csrf_token %}
+            <button class="btn sm danger" type="submit">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td class="empty" colspan="{{ columns|length|add:1 }}">
+        暂无数据，点击右上角「新增{{ cfg.title }}」创建第一条记录。
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

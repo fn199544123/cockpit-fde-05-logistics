@@ -1,0 +1,10 @@
+{% comment %}状态分布：一行标题 + 堆叠占比条 + 图例。rows=[{label,count,pct,tone,slug}]{% endcomment %}
+<div class="dist-title">{{ title }}</div>
+<div class="dist-bar">
+  {% for r in rows %}{% if r.count %}<span class="seg tone-{{ r.tone }}" style="width:{{ r.pct }}%" title="{{ r.label }} {{ r.count }}"></span>{% endif %}{% endfor %}
+</div>
+<div class="dist-legend">
+  {% for r in rows %}
+  <span class="lg"><i class="dot tone-{{ r.tone }}"></i>{{ r.label }} <b>{{ r.count }}</b></span>
+  {% endfor %}
+</div>

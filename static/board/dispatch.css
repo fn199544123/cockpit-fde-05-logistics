@@ -1,0 +1,69 @@
+/* 智能调度中心 —— 复用 dashboard.css 的深色变量，仅补充本页样式 */
+.dispatch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 22px 28px 40px;
+}
+@media (max-width: 1100px) { .dispatch { grid-template-columns: 1fr; } }
+
+.dp-card { display: flex; flex-direction: column; }
+.dp-card .sub { margin: 2px 0 16px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.dp-card .sub b { color: var(--accent); font-weight: 600; }
+
+.stat-row { display: flex; gap: 14px; margin-bottom: 14px; }
+.stat {
+  flex: 1; background: #0d1526; border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.stat .n { font-size: 30px; font-weight: 700; color: var(--accent); }
+.stat .l { color: var(--muted); font-size: 12px; letter-spacing: 1px; margin-top: 2px; }
+
+.zone-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip {
+  font-size: 12px; padding: 5px 11px; border-radius: 20px;
+  background: #0d1526; border: 1px solid var(--line); color: var(--txt);
+}
+.chip.muted { color: var(--muted); }
+
+table.plan { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+table.plan th, table.plan td {
+  text-align: left; padding: 8px; border-bottom: 1px solid var(--line); font-size: 13px;
+}
+table.plan th { color: var(--muted); font-weight: 600; }
+table.plan td.empty { text-align: center; color: var(--muted); padding: 20px; }
+table.plan td.codes { color: var(--muted); font-size: 12px; }
+
+.zbadge {
+  display: inline-block; min-width: 22px; text-align: center; font-weight: 700;
+  border-radius: 6px; padding: 2px 8px; color: #04101a;
+}
+.zbadge.z-A { background: #37e6c8; }
+.zbadge.z-B { background: #ffb454; }
+.zbadge.z-C { background: #8ab4ff; }
+
+.run-btn {
+  margin-top: auto; align-self: flex-start;
+  background: linear-gradient(135deg, #1f8f7f, #37e6c8);
+  color: #04121b; font-weight: 700; font-size: 15px; letter-spacing: 1px;
+  border: none; border-radius: 10px; padding: 11px 22px; cursor: pointer;
+  transition: .15s; box-shadow: 0 0 18px rgba(55,230,200,.25);
+}
+.run-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.run-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+.run-btn.busy { opacity: .6; cursor: progress; }
+
+.recent { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.recent-h { color: var(--muted); font-size: 12px; margin-bottom: 8px; letter-spacing: 1px; }
+.tag {
+  display: inline-block; font-size: 12px; margin: 0 6px 6px 0;
+  padding: 4px 10px; border-radius: 6px; background: #0d1526;
+  border: 1px solid var(--line); color: var(--txt);
+}
+
+.toast {
+  position: fixed; top: 78px; left: 50%; transform: translateX(-50%) translateY(-16px);
+  background: #103028; border: 1px solid var(--accent); color: #d6fff5;
+  padding: 12px 22px; border-radius: 10px; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: .25s; z-index: 50;
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err { background: #341418; border-color: #ff6b6b; color: #ffd9d9; }

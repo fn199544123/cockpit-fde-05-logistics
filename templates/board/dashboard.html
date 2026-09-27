@@ -1,0 +1,195 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◧</span>
+      <h1>仓储分拣调度看板</h1>
+      <span class="live"><i></i>LIVE</span>
+    </div>
+    <div class="top-right">
+      <a class="nav-btn alert-nav {% if alert_counts.critical %}has-crit{% elif alert_counts.total %}has-warn{% endif %}"
+         href="{% url 'alerts' %}">🚨 超时预警<span class="nav-badge" id="navBadge">{{ alert_counts.total }}</span></a>
+      <a class="nav-btn" href="{% url 'dispatch' %}">🧭 智能调度</a>
+      <a class="nav-btn" href="{% url 'analysis' %}">📊 效率分析</a>
+      <a class="nav-btn" href="{% url 'entry_home' %}">⚡ 快速录入</a>
+      <a class="nav-btn" href="{% url 'ledger_index' %}">🗂️ 基础台账</a>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- 超时 / 异常预警：大屏首屏突出展示 -->
+  <section class="alert-banner {% if alert_counts.critical %}crit{% elif alert_counts.total %}warn{% else %}ok{% endif %}"
+           id="alertBanner">
+    <div class="ab-head">
+      <span class="ab-title">🚨 超时 / 异常预警</span>
+      <span class="ab-metric crit"><b id="mCrit">{{ alert_counts.critical }}</b> 超时</span>
+      <span class="ab-metric warn"><b id="mWarn">{{ alert_counts.warning }}</b> 预警</span>
+      <span class="ab-metric total"><b id="mTotal">{{ alert_counts.total }}</b> 合计</span>
+      <a class="ab-more" href="{% url 'alerts' %}">进入预警中心 →</a>
+    </div>
+    <div class="ab-list" id="alertList">
+      {% for a in alert_top %}
+      <div class="ab-row {{ a.level }}">
+        <span class="ab-tag {{ a.level }}">{{ a.level_label }}</span>
+        <span class="ab-cat">{{ a.icon }}</span>
+        <span class="ab-code">{{ a.code }}</span>
+        <span class="ab-subj">{{ a.subject }}</span>
+        <span class="ab-reason">{{ a.reason }}</span>
+      </div>
+      {% empty %}
+      <div class="ab-empty" id="alertEmpty">✅ 当前无超时 / 异常，作业均在时限内</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- 核心指标 KPI -->
+  <section class="kpis">
+    <div class="kpi"><div class="num" id="kOrders">{{ m.stats.orders }}</div><div class="lbl">订单总数</div></div>
+    <div class="kpi"><div class="num" id="kItems">{{ m.stats.items }}</div><div class="lbl">在库件数</div></div>
+    <div class="kpi"><div class="num" id="kWaves">{{ m.stats.waves }}</div><div class="lbl">分拣波次</div></div>
+    <div class="kpi"><div class="num" id="kTasks">{{ m.stats.tasks }}</div><div class="lbl">拣货任务</div></div>
+    <div class="kpi"><div class="num" id="kVehicles">{{ m.stats.vehicles }}</div><div class="lbl">配送车</div></div>
+    <div class="kpi"><div class="num" id="kRoutes">{{ m.stats.routes }}</div><div class="lbl">配送路线</div></div>
+  </section>
+
+  <!-- 订单流水线 + 三环运营指标 -->
+  <section class="hero">
+    <div class="panel pipeline">
+      <h2>订单分拣流水线</h2>
+      <div class="flow" id="flow">
+        {% for p in m.pipeline %}
+        <div class="stage">
+          <div class="st-num tone-{{ p.tone }}" data-slug="{{ p.slug }}">{{ p.count }}</div>
+          <div class="st-lbl">{{ p.label }}</div>
+          <div class="st-bar"><i class="tone-{{ p.tone }}" style="width:{{ p.pct }}%" data-slug="{{ p.slug }}"></i></div>
+        </div>
+        {% if not forloop.last %}<div class="st-arrow">→</div>{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel gauges">
+      <h2>运营健康度</h2>
+      <div class="gauge-row">
+        <div class="gauge tone-good" id="gPick" style="--p:{{ m.rates.pick }}">
+          <div class="g-inner"><div class="g-val"><b id="gPickV">{{ m.rates.pick }}</b>%</div><div class="g-lbl">分拣完成</div></div>
+        </div>
+        <div class="gauge tone-info" id="gTask" style="--p:{{ m.rates.task }}">
+          <div class="g-inner"><div class="g-val"><b id="gTaskV">{{ m.rates.task }}</b>%</div><div class="g-lbl">拣货完成</div></div>
+        </div>
+        <div class="gauge tone-accent" id="gVeh" style="--p:{{ m.rates.veh_pct }}">
+          <div class="g-inner"><div class="g-val"><b id="gVehV">{{ m.rates.veh_ready }}</b>/{{ m.rates.veh_total }}</div><div class="g-lbl">运力就绪</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 状态分布（堆叠条 + 图例） + 区域产能 -->
+  <section class="grid3">
+    <div class="panel">
+      <h2>各环节状态分布</h2>
+      <div class="dist" id="distOrder">{% include 'board/_dist.html' with title='订单' rows=m.order_rows %}</div>
+      <div class="dist" id="distWave">{% include 'board/_dist.html' with title='波次' rows=m.wave_rows %}</div>
+      <div class="dist" id="distTask">{% include 'board/_dist.html' with title='拣货任务' rows=m.task_rows %}</div>
+      <div class="dist" id="distVehicle">{% include 'board/_dist.html' with title='配送车' rows=m.veh_rows %}</div>
+      <div class="dist" id="distRoute">{% include 'board/_dist.html' with title='配送路线' rows=m.route_rows %}</div>
+    </div>
+
+    <div class="panel">
+      <h2>库区产能分布</h2>
+      <div class="zones" id="zones">
+        {% for z in m.zones %}
+        <div class="zrow">
+          <span class="zname">{{ z.zone }} 区</span>
+          <div class="zbar"><i style="width:{{ z.pct }}%"></i></div>
+          <span class="zval"><b>{{ z.items }}</b> 件 · {{ z.orders }} 单</span>
+        </div>
+        {% empty %}
+        <div class="empty">暂无区域数据</div>
+        {% endfor %}
+      </div>
+      <div class="zhint">按订单收货点/地址推断作业库区（A/B/C），条长对应各区件数占比。</div>
+    </div>
+
+    <div class="panel">
+      <h2>分拣波次</h2>
+      <table>
+        <thead><tr><th>波次</th><th>库区</th><th>状态</th><th class="r">订单</th><th class="r">任务</th></tr></thead>
+        <tbody>
+          {% for w in waves %}
+          <tr>
+            <td class="mono">{{ w.code }}</td>
+            <td>{{ w.zone|default:"—" }}</td>
+            <td><span class="pill s-{{ w.status }}">{{ w.get_status_display }}</span></td>
+            <td class="r">{{ w.total_orders }}</td>
+            <td class="r">{{ w.total_tasks }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty">暂无数据，运行 scripts/seed_demo.py 生成演示数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 数据可视化：手写 SVG（趋势曲线 / 结构占比环图 / 库区对比柱状），不引任何 CDN -->
+  <section class="grid3 viz">
+    <div class="panel">
+      <div class="viz-head">
+        <h2>近 7 日作业趋势</h2>
+        <div class="viz-legend" id="trendLegend"></div>
+      </div>
+      <div class="chart" id="trendChart"></div>
+    </div>
+
+    <div class="panel">
+      <h2>订单状态占比</h2>
+      <div class="donut-wrap">
+        <div class="chart donut" id="donutChart"></div>
+        <div class="viz-legend col" id="donutLegend"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="viz-head">
+        <h2>库区吞吐对比</h2>
+        <div class="viz-legend" id="barsLegend"></div>
+      </div>
+      <div class="chart" id="barsChart"></div>
+    </div>
+  </section>
+
+  {{ m|json_script:"dashData" }}
+
+  <main class="grid">
+    <section class="panel">
+      <h2>配送路线</h2>
+      <table>
+        <thead><tr><th>路线</th><th>配送车</th><th class="r">站点</th><th>状态</th></tr></thead>
+        <tbody>
+          {% for r in routes %}
+          <tr>
+            <td><span class="mono">{{ r.code }}</span> {{ r.name }}</td>
+            <td>{{ r.vehicle.name|default:"—" }}</td>
+            <td class="r">{{ r.stops }}</td>
+            <td><span class="pill s-{{ r.status }}">{{ r.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty">暂无数据</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="{% static 'board/charts.js' %}"></script>
+  <script src="{% static 'board/dashboard.js' %}"></script>
+</body>
+</html>

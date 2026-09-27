@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数据录入 · {{ cfg.title }} · 仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'board/ledger.css' %}">
+  <link rel="stylesheet" href="{% static 'board/entry.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>数据录入 / 采集</h1>
+    <div class="top-right">
+      <a class="back-link" href="{% url 'ledger_list' slug %}">📋 查看{{ cfg.title }}台账</a>
+      <a class="back-link" href="{% url 'dashboard' %}">← 返回大屏看板</a>
+    </div>
+  </header>
+
+  <div class="ledger-shell entry-shell">
+    <nav class="side-nav">
+      {% for n in entry_nav %}
+      <a class="nav-item {% if slug == n.slug %}active{% endif %}" href="{% url 'entry_page' n.slug %}">
+        <span class="ico">{{ n.icon }}</span><span class="txt">{{ n.title }}</span>
+        <span class="badge">{{ n.count }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    <main class="ledger-main">
+      <div class="page-head row">
+        <div>
+          <h2>{{ cfg.icon }} 快速录入 · {{ cfg.title }}</h2>
+          <p class="sub">编号自动生成 · 录入即留连续快录 · 支持批量粘贴。下一编号
+            <b id="nextCode" class="code-chip">{{ next_code }}</b></p>
+        </div>
+        <div class="mode-switch">
+          <button class="btn sm mode-btn active" data-mode="single" type="button">单条快录</button>
+          <button class="btn sm mode-btn" data-mode="bulk" type="button">批量粘贴</button>
+        </div>
+      </div>
+
+      <div class="entry-cols">
+        <div class="entry-left">
+          <!-- 单条快录 -->
+          <form id="singleForm" class="form-card" data-url="{% url 'entry_create' slug %}">
+            {% csrf_token %}
+            <div class="form-grid">
+              {% for field in form %}
+              <div class="field {% if field.field.widget.input_type == 'checkbox' %}field-chk{% endif %}"
+                   data-field="{{ field.name }}">
+                <label for="{{ field.id_for_label }}">
+                  {{ field.label }}{% if field.field.required %}<span class="req">*</span>{% endif %}
+                </label>
+                {{ field }}
+                <div class="err" data-err></div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">录入并继续 ⏎</button>
+              <span class="hint">提交后表单保留、光标自动回到首个字段，可连续快录</span>
+            </div>
+          </form>
+
+          <!-- 批量粘贴 -->
+          <form id="bulkForm" class="form-card hidden" data-url="{% url 'entry_bulk' slug %}">
+            {% csrf_token %}
+            <div class="field">
+              <label>批量粘贴（每行一条）</label>
+              <div class="hint">{{ cfg.bulk_help }}</div>
+              <textarea name="bulk" class="inp bulk-area" rows="10"
+                        placeholder="{{ cfg.bulk_help }}"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit">批量落库</button>
+              <span class="hint">逐行校验，失败行不影响其余行</span>
+            </div>
+          </form>
+        </div>
+
+        <!-- 本次已录入 -->
+        <aside class="entry-right">
+          <div class="recent-head">
+            <span>本次已录入 <b id="sessionCount">0</b></span>
+            <span class="recent-latest">最近落库</span>
+          </div>
+          <ul id="entryList" class="entry-list">
+            {% for r in recent %}
+            <li class="hist"><span class="dot">·</span>{{ r.text }}</li>
+            {% empty %}
+            <li class="empty" id="emptyTip">还没有记录，录入的第一条会出现在这里 ↑</li>
+            {% endfor %}
+          </ul>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>window.ENTRY_SLUG = "{{ slug }}";</script>
+  <script src="{% static 'board/entry.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>智能调度中心 —— 仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'board/dispatch.css' %}">
+</head>
+<body>
+  {% csrf_token %}
+  <header class="topbar">
+    <h1>🧭 智能调度中心</h1>
+    <div class="top-right">
+      <a class="nav-btn" href="{% url 'dashboard' %}">← 返回大屏</a>
+      <a class="nav-btn" href="{% url 'analysis' %}">📊 效率分析</a>
+      <a class="nav-btn" href="{% url 'entry_home' %}">⚡ 快速录入</a>
+      <a class="nav-btn" href="{% url 'ledger_index' %}">🗂️ 基础台账</a>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <div id="toast" class="toast"></div>
+
+  <main class="dispatch">
+    <!-- 能力一：订单自动组波次分拣 -->
+    <section class="panel dp-card">
+      <h2>① 订单自动组波次分拣</h2>
+      <p class="sub">
+        把「未排波·待分拣」订单按库区聚类，受
+        <b>单波 ≤ {{ params.max_items }} 件 / ≤ {{ params.max_orders }} 单</b>
+        约束切波，并为每单派生拣货任务。
+      </p>
+      {% if oversized_orders %}<p class="sub">{{ oversized_orders }} 条订单超过单波容量，保留待处理；请拆分订单后重新组波。</p>{% endif %}
+
+      <div class="stat-row">
+        <div class="stat"><div class="n">{{ wave_total }}</div><div class="l">待组波订单</div></div>
+        <div class="stat"><div class="n">{{ wave_plan|length }}</div><div class="l">将建波次</div></div>
+      </div>
+
+      <div class="zone-chips">
+        {% for z in wave_zones %}
+          <span class="chip">{{ z.zone }} 区 · {{ z.orders }} 单 · {{ z.items }} 件</span>
+        {% empty %}
+          <span class="chip muted">暂无待组波订单</span>
+        {% endfor %}
+      </div>
+
+      <table class="plan">
+        <thead><tr><th>库区</th><th>订单数</th><th>件数</th><th>纳入订单</th></tr></thead>
+        <tbody>
+          {% for p in wave_plan %}
+          <tr>
+            <td><span class="zbadge z-{{ p.zone }}">{{ p.zone }}</span></td>
+            <td>{{ p.order_count }}</td>
+            <td>{{ p.items }}</td>
+            <td class="codes">{{ p.orders|join:"、" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty">无待建波次</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <button class="run-btn" data-action="waves" {% if not wave_plan %}disabled{% endif %}>
+        ▶ 执行自动组波
+      </button>
+
+      {% if recent_waves %}
+      <div class="recent">
+        <div class="recent-h">最近自动波次</div>
+        {% for w in recent_waves %}
+          <span class="tag">{{ w.code }} · {{ w.zone }}区 · {{ w.total_orders }}单</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- 能力二：按区域智能规划配送路线 -->
+    <section class="panel dp-card">
+      <h2>② 按区域智能规划配送路线</h2>
+      <p class="sub">
+        把「已入波·未上线路」订单按库区聚类，用
+        <b>首次适配递减装箱 + 额定载件约束</b>
+        分派到配送车（当前 {{ vehicles_ready }} 台空闲且无活动路线），路线内按门牌号排序。
+        规划不会自动完成拣货；在任务台账完成拣货后，才能在路线台账发车。运力不足的订单保留待规划。
+      </p>
+
+      <div class="stat-row">
+        <div class="stat"><div class="n">{{ route_total }}</div><div class="l">待规划订单</div></div>
+        <div class="stat"><div class="n">{{ route_plan|length }}</div><div class="l">将建路线</div></div>
+      </div>
+
+      <div class="zone-chips">
+        {% for z in route_zones %}
+          <span class="chip">{{ z.zone }} 区 · {{ z.orders }} 单 · {{ z.items }} 件</span>
+        {% empty %}
+          <span class="chip muted">暂无待规划订单</span>
+        {% endfor %}
+      </div>
+
+      <table class="plan">
+        <thead><tr><th>库区</th><th>配送车</th><th>站点</th><th>件数</th><th>承运订单</th></tr></thead>
+        <tbody>
+          {% for p in route_plan %}
+          <tr>
+            <td><span class="zbadge z-{{ p.zone }}">{{ p.zone }}</span></td>
+            <td>{{ p.vehicle }}</td>
+            <td>{{ p.stops }}</td>
+            <td>{{ p.items }}</td>
+            <td class="codes">{{ p.orders|join:"、" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty">无待建路线</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <button class="run-btn" data-action="routes" {% if not route_plan %}disabled{% endif %}>
+        ▶ 执行智能规划
+      </button>
+
+      {% if recent_routes %}
+      <div class="recent">
+        <div class="recent-h">最近智能路线</div>
+        {% for r in recent_routes %}
+          <span class="tag">{{ r.code }} · {{ r.vehicle.name|default:"未派车" }} · {{ r.stops }}站</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+  </main>
+
+  <script>window.DISPATCH_RUN_URL = "{% url 'dispatch_run' 'ACTION' %}";</script>
+  <script src="{% static 'board/dashboard.js' %}"></script>
+  <script src="{% static 'board/dispatch.js' %}"></script>
+</body>
+</html>

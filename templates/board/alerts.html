@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>超时预警中心 · 仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🚨 超时 / 异常预警中心</h1>
+    <div class="top-right">
+      <a class="nav-btn" href="{% url 'dashboard' %}">⬅ 返回大屏</a>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <section class="kpis alert-kpis">
+    <div class="kpi crit"><div class="num" id="mCrit">{{ counts.critical }}</div><div class="lbl">超时(严重)</div></div>
+    <div class="kpi warn"><div class="num" id="mWarn">{{ counts.warning }}</div><div class="lbl">预警(临期/异常)</div></div>
+    <div class="kpi"><div class="num" id="mTotal">{{ counts.total }}</div><div class="lbl">预警合计</div></div>
+    <div class="kpi"><div class="num">{{ counts.wave }}</div><div class="lbl">🌊 波次</div></div>
+    <div class="kpi"><div class="num">{{ counts.route }}</div><div class="lbl">🚚 配送</div></div>
+    <div class="kpi"><div class="num">{{ counts.order }}</div><div class="lbl">📦 订单</div></div>
+    <div class="kpi"><div class="num">{{ counts.pick }}</div><div class="lbl">🧰 拣货</div></div>
+  </section>
+
+  <main class="grid-1">
+    <section class="panel">
+      <h2>预警明细（按紧急程度排序）</h2>
+      <table class="alert-table">
+        <thead>
+          <tr><th>级别</th><th>类别</th><th>编号</th><th>对象</th><th>预警原因</th><th class="r">超时/剩余</th></tr>
+        </thead>
+        <tbody id="alertRows">
+          {% for a in items %}
+          <tr class="{{ a.level }}">
+            <td><span class="ab-tag {{ a.level }}">{{ a.level_label }}</span></td>
+            <td>{{ a.icon }}</td>
+            <td class="mono">{{ a.code }}</td>
+            <td>{{ a.subject }}</td>
+            <td class="reason">{{ a.reason }}</td>
+            <td class="r mono">{{ a.ref_text }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="empty">✅ 当前无超时 / 异常，所有作业均在时限内</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="sla-note">
+        时限规则：订单应拣完 {{ sla.order }} 分钟内 · 拣货任务 {{ sla.pick }} 分钟内 ·
+        路线在途上限 {{ sla.route }} 分钟 · 距时限 ≤ {{ sla.soon }} 分钟即临期预警。
+        页面每 15 秒自动刷新。
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // 时钟
+    setInterval(function () {
+      var d = new Date(), p = function (n) { return String(n).padStart(2, '0'); };
+      document.getElementById('clock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }, 1000);
+
+    var LV = { critical: '超时', warning: '预警' };
+    function render(data) {
+      var c = data.counts;
+      document.getElementById('mCrit').textContent = c.critical;
+      document.getElementById('mWarn').textContent = c.warning;
+      document.getElementById('mTotal').textContent = c.total;
+      var tb = document.getElementById('alertRows');
+      if (!data.items.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="empty">✅ 当前无超时 / 异常，所有作业均在时限内</td></tr>';
+        return;
+      }
+      tb.innerHTML = data.items.map(function (a) {
+        return '<tr class="' + a.level + '">' +
+          '<td><span class="ab-tag ' + a.level + '">' + a.level_label + '</span></td>' +
+          '<td>' + a.icon + '</td>' +
+          '<td class="mono">' + a.code + '</td>' +
+          '<td>' + a.subject + '</td>' +
+          '<td class="reason">' + a.reason + '</td>' +
+          '<td class="r mono">' + a.ref_text + '</td></tr>';
+      }).join('');
+    }
+    function poll() {
+      fetch('{% url "alerts_data" %}').then(function (r) { return r.json(); }).then(render).catch(function () {});
+    }
+    setInterval(poll, 15000);
+  </script>
+</body>
+</html>

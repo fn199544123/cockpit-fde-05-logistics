@@ -1,0 +1,208 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>效率分析中心 —— 仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'board/analysis.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📊 分拣效率与车辆装载率分析</h1>
+    <div class="top-right">
+      <a class="nav-btn" href="{% url 'dashboard' %}">← 返回大屏</a>
+      <a class="nav-btn" href="{% url 'dispatch' %}">🧭 智能调度</a>
+      <a class="nav-btn" href="{% url 'ledger_index' %}">🗂️ 基础台账</a>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <main class="analysis">
+    <!-- ========== 一、分拣效率 ========== -->
+    <section class="an-block">
+      <h2 class="an-h">① 分拣效率 <span class="an-sub">拣货任务完成率 · 拣货员产能 · 库区吞吐 · 波次件效</span></h2>
+
+      <div class="an-top">
+        <div class="panel gauges an-gauge">
+          <div class="gauge-row">
+            <div class="gauge tone-{{ a.sorting.done_tone }}"
+                 id="gDone" style="--p:{{ a.sorting.done_rate }}">
+              <div class="g-inner">
+                <div class="g-val"><b id="gDoneV">{{ a.sorting.done_rate }}</b>%</div>
+                <div class="g-lbl">任务完成率</div>
+              </div>
+            </div>
+          </div>
+          <div class="g-foot">
+            已完成 <b id="sDone">{{ a.sorting.done }}</b> / 共 <b id="sTasks">{{ a.sorting.total_tasks }}</b> 条任务
+          </div>
+        </div>
+
+        <div class="an-kpis">
+          <div class="kpi"><div class="num" id="sPicked">{{ a.sorting.picked_items }}</div><div class="lbl">已拣件数</div></div>
+          <div class="kpi"><div class="num" id="sTph">{{ a.sorting.tph }}</div><div class="lbl">件效 (件/小时)</div></div>
+          <div class="kpi"><div class="num" id="sPickers">{{ a.sorting.active_pickers }}</div><div class="lbl">在岗拣货员</div></div>
+          <div class="kpi"><div class="num" id="sDoing">{{ a.sorting.doing }}</div><div class="lbl">拣货中</div></div>
+          <div class="kpi"><div class="num" id="sTodo">{{ a.sorting.todo }}</div><div class="lbl">待拣任务</div></div>
+        </div>
+      </div>
+
+      <div class="an-cols">
+        <!-- 库区效率对比 -->
+        <div class="panel">
+          <h2>库区分拣效率</h2>
+          <div class="bars" id="zoneBars">
+            {% for z in a.sorting.zones %}
+            <div class="brow">
+              <span class="bname">{{ z.zone }} 区</span>
+              <div class="bbar"><i class="tone-{{ z.tone }}" style="width:{{ z.rate }}%"></i></div>
+              <span class="bval"><b class="tone-{{ z.tone }}">{{ z.rate }}%</b> · {{ z.done }}/{{ z.tasks }} · {{ z.items }} 件</span>
+            </div>
+            {% empty %}
+            <div class="empty">暂无拣货任务</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- 拣货员效率榜 -->
+        <div class="panel">
+          <h2>拣货员效率榜 <span class="an-tip">按已拣件数排序</span></h2>
+          <table class="an-table" id="pickerTable">
+            <thead><tr><th>拣货员</th><th class="r">完成/任务</th><th class="r">已拣件</th><th>完成率</th></tr></thead>
+            <tbody>
+              {% for p in a.sorting.pickers %}
+              <tr>
+                <td>{{ p.name }}</td>
+                <td class="r mono">{{ p.done }}/{{ p.tasks }}</td>
+                <td class="r mono">{{ p.items }}</td>
+                <td>
+                  <div class="minibar"><i class="tone-{{ p.tone }}" style="width:{{ p.rate }}%"></i></div>
+                  <span class="tone-{{ p.tone }}">{{ p.rate }}%</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="empty">暂无拣货员数据</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 波次效率明细 -->
+      <div class="panel">
+        <h2>波次分拣效率 <span class="an-tip">件效 = 已拣件数 / 波次投入工时</span></h2>
+        <table class="an-table" id="waveTable">
+          <thead><tr>
+            <th>波次</th><th>库区</th><th>状态</th><th class="r">完成/任务</th>
+            <th class="r">已拣件</th><th class="r">工时(h)</th><th class="r">件/小时</th><th>完成率</th>
+          </tr></thead>
+          <tbody>
+            {% for w in a.sorting.waves %}
+            <tr>
+              <td class="mono">{{ w.code }}</td>
+              <td><span class="zbadge z-{{ w.zone }}">{{ w.zone }}</span></td>
+              <td><span class="pill s-{{ w.status_slug }}">{{ w.status }}</span></td>
+              <td class="r mono">{{ w.done }}/{{ w.tasks }}</td>
+              <td class="r mono">{{ w.items }}</td>
+              <td class="r mono">{{ w.hours }}</td>
+              <td class="r mono">{{ w.throughput }}</td>
+              <td>
+                <div class="minibar"><i class="tone-{{ w.tone }}" style="width:{{ w.rate }}%"></i></div>
+                <span class="tone-{{ w.tone }}">{{ w.rate }}%</span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="empty">暂无波次数据</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 二、车辆装载率 ========== -->
+    <section class="an-block">
+      <h2 class="an-h">② 车辆装载率 <span class="an-sub">承运件数 / 额定载件 · 满载与欠载识别 · 闲置运力</span></h2>
+
+      <div class="an-top">
+        <div class="panel gauges an-gauge">
+          <div class="gauge-row">
+            <div class="gauge tone-{{ a.loading.avg_tone }}" id="gLoad" style="--p:{{ a.loading.avg_load }}">
+              <div class="g-inner">
+                <div class="g-val"><b id="gLoadV">{{ a.loading.avg_load }}</b>%</div>
+                <div class="g-lbl">平均装载率</div>
+              </div>
+            </div>
+          </div>
+          <div class="g-foot">
+            覆盖 <b id="lRoutes">{{ a.loading.routes_total }}</b> 条在办路线 ·
+            满载阈值 {{ thr.load_full }}% / 欠载阈值 {{ thr.load_low }}%
+          </div>
+        </div>
+
+        <div class="an-kpis">
+          <div class="kpi"><div class="num tone-good" id="lFull">{{ a.loading.full }}</div><div class="lbl">满载路线</div></div>
+          <div class="kpi"><div class="num tone-warn" id="lLow">{{ a.loading.low }}</div><div class="lbl">欠载路线</div></div>
+          <div class="kpi"><div class="num" id="lActive">{{ a.loading.active_vehicles }}</div><div class="lbl">在运车辆</div></div>
+          <div class="kpi"><div class="num tone-muted" id="lIdle">{{ a.loading.idle_count }}</div><div class="lbl">闲置运力</div></div>
+        </div>
+      </div>
+
+      <div class="an-cols">
+        <!-- 单车装载率 -->
+        <div class="panel">
+          <h2>单车装载率 <span class="an-tip">多趟平均 = 承运件数 / (额定载件 × 趟数)</span></h2>
+          <div class="bars" id="vehBars">
+            {% for v in a.loading.vehicles %}
+            <div class="brow">
+              <span class="bname">{{ v.name }}<small>{{ v.driver }}</small></span>
+              <div class="bbar"><i class="tone-{{ v.tone }}" style="width:{{ v.rate }}%"></i></div>
+              <span class="bval"><b class="tone-{{ v.tone }}">{{ v.rate }}%</b> · {{ v.items }}/{{ v.capacity }} 件 · {{ v.routes }} 趟</span>
+            </div>
+            {% empty %}
+            <div class="empty">暂无在运车辆</div>
+            {% endfor %}
+          </div>
+          {% if a.loading.idle %}
+          <div class="idle-note">
+            💤 闲置运力：
+            {% for i in a.loading.idle %}<span class="tag">{{ i.name }} · 额定 {{ i.capacity }} 件</span>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- 单路线装载率 -->
+        <div class="panel">
+          <h2>单路线装载率 <span class="an-tip">按装载率降序</span></h2>
+          <table class="an-table" id="routeTable">
+            <thead><tr>
+              <th>路线</th><th>库区</th><th>配送车</th><th class="r">件/额定</th><th class="r">站点</th><th>装载率</th>
+            </tr></thead>
+            <tbody>
+              {% for r in a.loading.routes %}
+              <tr>
+                <td class="mono">{{ r.code }}</td>
+                <td><span class="zbadge z-{{ r.zone }}">{{ r.zone }}</span></td>
+                <td>{{ r.vehicle }}</td>
+                <td class="r mono">{{ r.items }}/{{ r.capacity }}</td>
+                <td class="r mono">{{ r.stops }}</td>
+                <td>
+                  <div class="minibar"><i class="tone-{{ r.tone }}" style="width:{% if r.rate > 100 %}100{% else %}{{ r.rate }}{% endif %}%"></i></div>
+                  <span class="tone-{{ r.tone }}">{{ r.rate }}%</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="empty">暂无配送路线</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="{% static 'board/dashboard.js' %}"></script>
+  <script src="{% static 'board/analysis.js' %}"></script>
+</body>
+</html>

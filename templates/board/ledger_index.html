@@ -1,0 +1,21 @@
+{% extends 'board/ledger_base.html' %}
+{% block title %}台账总览{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h2>台账总览</h2>
+  <p class="sub">维护仓储分拣调度所需的基础主数据。点击任一台账进入列表，可新增 / 编辑 / 删除。</p>
+</div>
+
+<div class="card-grid">
+  {% for n in nav %}
+  <a class="ledger-card" href="{% url 'ledger_list' n.slug %}">
+    <div class="ico">{{ n.icon }}</div>
+    <div class="meta">
+      <div class="name">{{ n.title }}</div>
+      <div class="count">{{ n.count }} 条记录</div>
+    </div>
+    <div class="go">进入 →</div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

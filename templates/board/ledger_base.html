@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}基础台账{% endblock %} · 仓储分拣调度看板</title>
+  <link rel="stylesheet" href="{% static 'board/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'board/ledger.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <h1>基础台账管理</h1>
+    <div class="top-right">
+      <a class="back-link" href="{% url 'entry_home' %}">⚡ 快速录入</a>
+      <a class="back-link" href="{% url 'dashboard' %}">← 返回大屏看板</a>
+    </div>
+  </header>
+
+  <div class="ledger-shell">
+    <nav class="side-nav">
+      <a class="nav-item {% if not slug %}active{% endif %}" href="{% url 'ledger_index' %}">
+        <span class="ico">🗂️</span><span class="txt">台账总览</span>
+      </a>
+      {% for n in nav %}
+      <a class="nav-item {% if slug == n.slug %}active{% endif %}" href="{% url 'ledger_list' n.slug %}">
+        <span class="ico">{{ n.icon }}</span><span class="txt">{{ n.title }}</span>
+        <span class="badge">{{ n.count }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    <main class="ledger-main">
+      {% if messages %}
+      <div class="msgs">
+        {% for m in messages %}
+        <div class="msg {{ m.tags }}">{{ m }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{% static 'board/ledger.js' %}"></script>
+</body>
+</html>
